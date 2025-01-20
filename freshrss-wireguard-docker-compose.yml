@@ -1,0 +1,50 @@
+services:
+
+  freshrss:
+    image: lscr.io/linuxserver/freshrss:latest
+    container_name: freshrss
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /opt/FreshRSS/config:/config
+    restart: unless-stopped
+    networks:
+      lan:
+        ipv4_address: 10.0.0.200
+
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - SERVERURL=<YOUR SERVER URL>
+      - SERVERPORT=51820
+      - PEERS=1
+      - PEERDNS=auto
+      - ALLOWEDIPS=0.0.0.0/0
+      - PERSISTENTKEEPALIVE_PEERS=all
+      - LOG_CONFS=true
+    volumes:
+      - /opt/WireGuard/config:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - 51820:51820/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      - lan
+
+networks:
+  lan:
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.0.0.0/24
