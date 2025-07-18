@@ -1,0 +1,47 @@
+#cloud-config
+users:
+  # Создание нового пользователя
+  - name: <Username>
+    ssh_authorized_keys:
+      - "Public SSH key"
+    sudo: ALL=(ALL:ALL) ALL
+    groups: sudo
+    shell: /bin/bash
+chpasswd:
+  # Настройка пароля для пользователя
+  expire: true
+  users:
+    - name: <Username>
+      password: changeme
+      type: text
+
+runcmd:
+  # Обновление и установка необходимых пакетов
+  - apt-get update -y && apt-get upgrade -y
+  - apt-get install -y curl ufw fail2ban
+  # Настройка SSH
+  - |
+    if grep -qE '^#?Port ' /etc/ssh/sshd_config; then
+      sed -i 's/^#\?Port .*/Port <SSH Port>/' /etc/ssh/sshd_config
+    else
+      echo 'Port <SSH Port>' >> /etc/ssh/sshd_config
+    fi
+  - |
+    if grep -qE '^#?PasswordAuthentication ' /etc/ssh/sshd_config; then
+      sed -i 's/^#\?PasswordAuthentication .*/PasswordAuthentication no/' /etc/ssh/sshd_config
+    else
+      echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config
+    fi
+  - |
+    if grep -qE '^#?PermitRootLogin ' /etc/ssh/sshd_config; then
+      sed -i 's/^#\?PermitRootLogin .*/PermitRootLogin no/' /etc/ssh/sshd_config
+    else
+      echo 'PermitRootLogin no' >> /etc/ssh/sshd_config
+    fi
+  - systemctl daemon-reload && systemctl restart ssh.socket && systemctl restart ssh
+  # Настройка FireWall
+  - ufw reset
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow <SSH port>/tcp
+  - ufw enable
